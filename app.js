@@ -28,10 +28,10 @@ app.set('view engine', 'pug');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
+app.use(cookieParser('12345-67890-09876-54321'));
 
 function auth (req, res, next){
-console.log(req.headers);
+if (!req.signedCookies.user){
 const authHeader = req.headers.authorization;
 if (!authHeader){
   const err = new Error('You are not authenticated');
@@ -45,12 +45,25 @@ const user = auth[0];
 const pass = auth[1];
 
 if (user === 'admin' && pass === 'password'){
+  res.cookie('user', 'admin', {signed: true});
   return next();
 }
 else {
   const err = new Error('You are not authenticated');
+  res.setHeader('WWW-Authenticate', 'Basic');
   err.status = 401;
   return next(err);
+}
+}
+else {
+  if (req.signedCookies.user === 'admin'){
+    return next();
+  }
+else {
+  const err = new Error('You are not authenticated!');
+            err.status = 401;
+            return next(err);
+}
 }
 };
 
